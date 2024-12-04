@@ -256,3 +256,151 @@ function wc_advanced_sorting_customize_orderby($sortby_options)
 
     return $sortby_options;
 }
+
+
+
+
+
+add_filter('woocommerce_get_catalog_ordering_args', 'wc_custom_sorting_logic_ajax');
+function wc_custom_sorting_logic_ajax($args)
+{
+    $orderby = $_GET['orderby'] ?? ''; // Get the orderby parameter
+
+    switch ($orderby) {
+        case 'alphabetical':
+            $args['orderby'] = 'title';
+            $args['order'] = 'ASC';
+            break;
+        case 'reverse_alpha':
+            $args['orderby'] = 'title';
+            $args['order'] = 'DESC';
+            break;
+        case 'by_stock':
+            $args['meta_key'] = '_stock_status';
+            $args['orderby'] = 'meta_value';
+            $args['order'] = 'ASC';
+            break;
+        case 'review_count':
+            $args['orderby'] = 'meta_value_num';
+            $args['meta_key'] = '_wc_review_count';
+            $args['order'] = 'DESC';
+            break;
+        case 'on_sale_first':
+            $args['meta_key'] = '_sale_price';
+            $args['orderby'] = 'meta_value_num';
+            $args['order'] = 'DESC';
+            break;
+    }
+
+    return $args;
+}
+
+add_action('wp_enqueue_scripts', 'wc_advanced_sorting_enqueue_scripts');
+function wc_advanced_sorting_enqueue_scripts()
+{
+    
+
+    wp_enqueue_style(
+        'wc-sorting-theme-style', 
+        plugin_dir_url(__FILE__) . 'assets/css/loading.css', 
+        array(), 
+        time(), 
+        'all' 
+    );
+    wp_enqueue_script('jquery');
+
+    // Enqueue custom AJAX script
+    wp_enqueue_script('wc-advanced-sorting-ajax', plugin_dir_url(__FILE__) . 'assets/js/wc-advanced-sorting.js', array('jquery'), time(), true);
+
+    // Localize script for AJAX URL
+    wp_localize_script('wc-advanced-sorting-ajax', 'wc_ajax_url', array('url' => admin_url('admin-ajax.php')));
+}
+
+add_action('wp_ajax_ajax_sort_products', 'handle_ajax_sort_products');
+add_action('wp_ajax_nopriv_ajax_sort_products', 'handle_ajax_sort_products');
+
+function handle_ajax_sort_products() {
+    // Retrieve the selected sorting option
+    $orderby = isset($_POST['orderby']) ? sanitize_text_field($_POST['orderby']) : 'menu_order';
+
+    // Define query arguments
+    $args = array(
+        'post_type'      => 'product',
+        'post_status'    => 'publish',
+        'posts_per_page' => 12,
+    );
+
+    switch ($orderby) {
+        case 'popularity':
+            $args['meta_key'] = 'total_sales';
+            $args['orderby']  = 'meta_value_num';
+            $args['order']    = 'DESC';
+            break;
+
+        case 'rating':
+            $args['meta_key'] = '_wc_average_rating';
+            $args['orderby']  = 'meta_value_num';
+            $args['order']    = 'DESC';
+            break;
+
+        case 'date':
+            $args['orderby'] = 'date';
+            $args['order']   = 'DESC';
+            break;
+
+        case 'price':
+            $args['meta_key'] = '_price';
+            $args['orderby']  = 'meta_value_num';
+            $args['order']    = 'ASC';
+            break;
+
+        case 'price-desc':
+            $args['meta_key'] = '_price';
+            $args['orderby']  = 'meta_value_num';
+            $args['order']    = 'DESC';
+            break;
+        case 'alphabetical':
+            $args['orderby']  = 'title';
+            $args['order']    = 'ASC';
+            break;
+        case 'reverse_alpha':
+            $args['orderby'] = 'title';
+            $args['order'] = 'DESC';
+            break;
+        case 'by_stock':
+            $args['meta_key'] = '_stock_status';
+            $args['orderby'] = 'meta_value';
+            $args['order'] = 'ASC';
+            break;
+        case 'review_count':
+            $args['orderby'] = 'meta_value_num';
+            $args['meta_key'] = '_wc_review_count';
+            $args['order'] = 'DESC';
+            break;
+        case 'on_sale_first':
+            $args['meta_key'] = '_sale_price';
+            $args['orderby'] = 'meta_value_num';
+            $args['order'] = 'DESC';
+            break;
+
+        default:
+            $args['orderby'] = 'menu_order';
+            break;
+    }
+
+    // Query WooCommerce products
+    $query = new WP_Query($args);
+
+    if ($query->have_posts()) {
+        while ($query->have_posts()) {
+            $query->the_post();
+            wc_get_template_part('content', 'product'); // WooCommerce product template
+        }
+    } else {
+        echo '<p>No products found.</p>';
+    }
+
+    wp_reset_postdata();
+    wp_die(); // Important for AJAX calls
+}
+

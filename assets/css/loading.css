@@ -1,0 +1,21 @@
+.products.loading,
+.wp-block-woocommerce-product-template.loading {
+    opacity: 0.5;
+    position: relative;
+}
+
+.products.loading::after,
+.wp-block-woocommerce-product-template.loading:after {
+    content: 'Loading...';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #fff;
+    padding: 10px;
+    border-radius: 5px;
+    box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+    font-size: 14px;
+    color: #000;
+    z-index: 10;
+}
